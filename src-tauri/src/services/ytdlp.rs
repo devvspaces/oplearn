@@ -21,11 +21,31 @@ use crate::services::import::{ImportedPlaylist, ImportedVideo};
 #[derive(Debug, Clone)]
 pub struct YtDlp {
     pub binary: PathBuf,
+    /// Browser whose YouTube cookies yt-dlp reads (`--cookies-from-browser`). Off by default
+    /// (SPEC §4.5, §7.9); set from Settings → Downloads → Advanced.
+    pub cookies_browser: Option<String>,
+    /// JavaScript runtime for YouTube's "n" challenge (`--js-runtimes name:path`). Without one,
+    /// signed-in (cookie) requests only get storyboard images.
+    pub js_runtime: Option<(String, PathBuf)>,
 }
+
+/// Settings key holding the browser name for `--cookies-from-browser` (absent = off).
+pub const COOKIES_BROWSER_KEY: &str = "ytdlp_cookies_browser";
+
+/// Browsers accepted for `--cookies-from-browser`.
+pub const COOKIE_BROWSERS: &[&str] = &[
+    "chrome", "firefox", "safari", "edge", "brave", "chromium", "opera", "vivaldi",
+];
 
 impl YtDlp {
     pub fn locate(bin_dir: &Path) -> AppResult<Self> {
-        crate::paths::locate_binary("yt-dlp", bin_dir).map(|binary| Self { binary }).ok_or_else(|| {
+        crate::paths::locate_binary("yt-dlp", bin_dir)
+            .map(|binary| Self {
+                binary,
+                cookies_browser: None,
+                js_runtime: find_js_runtime(bin_dir),
+            })
+            .ok_or_else(|| {
             AppError::new(
                 ErrorCode::YtDlpMissing,
                 "yt-dlp was not found. Run `pnpm fetch-binaries` (development) or reinstall Lectern.",
@@ -33,10 +53,57 @@ impl YtDlp {
         })
     }
 
+    /// Arguments every yt-dlp call starts with. Cookies are only sent when `with_cookies`.
+    pub fn base_args(&self, with_cookies: bool) -> Vec<String> {
+        let mut a = vec!["--ignore-config".to_string()];
+        if let Some((name, path)) = &self.js_runtime {
+            a.push("--js-runtimes".into());
+            a.push(format!("{name}:{}", path.display()));
+        }
+        if with_cookies && let Some(b) = &self.cookies_browser {
+            a.push("--cookies-from-browser".into());
+            a.push(b.clone());
+        }
+        a
+    }
+
+    fn classify(&self, stderr: &str, with_cookies: bool) -> AppError {
+        classify_error_with(
+            stderr,
+            self.cookies_browser.as_deref().filter(|_| with_cookies),
+            self.js_runtime.is_some(),
+        )
+    }
+
+    /// Cookies are a fallback: the first attempt goes without them, and only YouTube's sign-in
+    /// check (with cookies configured) triggers a second attempt with them.
+    fn retry_with_cookies(&self, e: &AppError, with_cookies: bool) -> bool {
+        !with_cookies && self.cookies_browser.is_some() && e.code == ErrorCode::SignInRequired
+    }
+
     async fn run(&self, args: &[&str], timeout: Duration) -> AppResult<String> {
+        match self.run_once(args, timeout, false).await {
+            Err(e) if self.retry_with_cookies(&e, false) => {
+                log::info!("YouTube asked for sign-in; retrying with browser cookies");
+                self.run_once(args, timeout, true).await
+            }
+            r => r,
+        }
+    }
+
+    async fn run_once(
+        &self,
+        args: &[&str],
+        timeout: Duration,
+        with_cookies: bool,
+    ) -> AppResult<String> {
         let mut cmd = Command::new(&self.binary);
-        cmd.arg("--ignore-config")
-            .args(args)
+        if args == ["--version"] {
+            cmd.arg("--ignore-config");
+        } else {
+            cmd.args(self.base_args(with_cookies));
+        }
+        cmd.args(args)
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -51,7 +118,7 @@ impl YtDlp {
             .map_err(|_| AppError::new(ErrorCode::Timeout, "yt-dlp timed out"))??;
         if !out.status.success() {
             let stderr = String::from_utf8_lossy(&out.stderr);
-            return Err(classify_error(&stderr));
+            return Err(self.classify(&stderr, with_cookies));
         }
         Ok(String::from_utf8_lossy(&out.stdout).into_owned())
     }
@@ -535,7 +602,27 @@ impl YtDlp {
         &self,
         o: &DownloadOptions<'_>,
         mut on_progress: impl FnMut(ProgressSnapshot),
+        stop: tokio::sync::watch::Receiver<Option<StopReason>>,
+    ) -> AppResult<DownloadOutcome> {
+        match self
+            .download_video_once(o, &mut on_progress, stop.clone(), false)
+            .await
+        {
+            Err(e) if self.retry_with_cookies(&e, false) => {
+                log::info!("YouTube asked for sign-in; retrying the download with browser cookies");
+                self.download_video_once(o, &mut on_progress, stop, true)
+                    .await
+            }
+            r => r,
+        }
+    }
+
+    async fn download_video_once(
+        &self,
+        o: &DownloadOptions<'_>,
+        on_progress: &mut impl FnMut(ProgressSnapshot),
         mut stop: tokio::sync::watch::Receiver<Option<StopReason>>,
+        with_cookies: bool,
     ) -> AppResult<DownloadOutcome> {
         use tokio::io::{AsyncBufReadExt, BufReader};
         std::fs::create_dir_all(o.out_dir)?;
@@ -546,7 +633,7 @@ impl YtDlp {
              %(progress.total_bytes_estimate)s|%(progress.speed)s|%(progress.eta)s|%(info.format_id)s"
         );
         let mut cmd = Command::new(&self.binary);
-        cmd.arg("--ignore-config")
+        cmd.args(self.base_args(with_cookies))
             .args([
                 "--no-playlist",
                 "--no-warnings",
@@ -633,14 +720,99 @@ impl YtDlp {
         if status.success() {
             Ok(DownloadOutcome::Completed)
         } else {
-            Err(classify_error(&err))
+            Err(self.classify(&err, with_cookies))
         }
     }
 }
 
+/// A JavaScript runtime yt-dlp can use for YouTube's challenges: deno, node or bun, looked up like
+/// the other binaries, then in common install folders (macOS GUI apps get a minimal PATH).
+pub fn find_js_runtime(bin_dir: &Path) -> Option<(String, PathBuf)> {
+    const NAMES: [&str; 3] = ["deno", "node", "bun"];
+    for name in NAMES {
+        if let Some(p) = crate::paths::locate_binary(name, bin_dir) {
+            return Some((name.to_string(), p));
+        }
+    }
+    let home = dirs::home_dir()?;
+    let mut dirs = vec![
+        home.join(".deno/bin"),
+        home.join(".bun/bin"),
+        home.join(".volta/bin"),
+        PathBuf::from("/opt/homebrew/bin"),
+        PathBuf::from("/usr/local/bin"),
+    ];
+    // nvm: newest installed version first.
+    if let Ok(rd) = std::fs::read_dir(home.join(".nvm/versions/node")) {
+        let mut v: Vec<PathBuf> = rd.flatten().map(|e| e.path().join("bin")).collect();
+        v.sort_by_key(|p| std::cmp::Reverse(node_version(p)));
+        dirs.extend(v);
+    }
+    for name in NAMES {
+        let exe = if cfg!(windows) {
+            format!("{name}.exe")
+        } else {
+            name.to_string()
+        };
+        if let Some(p) = dirs.iter().map(|d| d.join(&exe)).find(|p| p.is_file()) {
+            return Some((name.to_string(), p));
+        }
+    }
+    None
+}
+
+/// `(major, minor, patch)` from an nvm `.../vX.Y.Z/bin` path, for sorting.
+fn node_version(bin: &Path) -> (u32, u32, u32) {
+    let v = bin
+        .parent()
+        .and_then(|p| p.file_name())
+        .and_then(|n| n.to_str())
+        .unwrap_or("")
+        .trim_start_matches('v');
+    let mut it = v.split('.').map(|x| x.parse().unwrap_or(0));
+    (
+        it.next().unwrap_or(0),
+        it.next().unwrap_or(0),
+        it.next().unwrap_or(0),
+    )
+}
+
 /// Turns yt-dlp stderr into a human-readable error (SPEC §7.3).
 pub fn classify_error(stderr: &str) -> AppError {
-    let s = stderr.to_ascii_lowercase();
+    classify_error_with(stderr, None, true)
+}
+
+/// Like [`classify_error`]. `cookies_browser` is the browser whose cookies were sent (if any) and
+/// `has_js` whether a JS runtime was available; both tailor the advice.
+pub fn classify_error_with(stderr: &str, cookies_browser: Option<&str>, has_js: bool) -> AppError {
+    let s = stderr.to_lowercase().replace('\u{2019}', "'");
+    // YouTube's "Sign in to confirm you're not a bot" check for IPs it thinks are automated.
+    if s.contains("confirm you're not a bot") || s.contains("sign in to confirm") {
+        let msg = match cookies_browser {
+            None => {
+                "YouTube wants a sign-in check for this network (\"confirm you're not a bot\"). \
+                     Wait a while and retry, or turn on Settings → Downloads → Advanced → \
+                     Use browser cookies."
+                    .to_string()
+            }
+            Some(b) => format!(
+                "YouTube still asked for a sign-in check. Make sure you're signed in to YouTube in \
+                 {b}, then retry."
+            ),
+        };
+        return AppError::new(ErrorCode::SignInRequired, msg);
+    }
+    // Signed-in requests need the JS challenge solved; without a runtime only storyboards remain.
+    if !has_js
+        && (s.contains("only images are available")
+            || s.contains("requested format is not available"))
+    {
+        return AppError::new(
+            ErrorCode::YtDlp,
+            "YouTube only offers this video to clients that can run JavaScript. Install Node.js \
+             (nodejs.org) or Deno, then retry.",
+        );
+    }
     let last = stderr
         .lines()
         .rev()
@@ -942,6 +1114,33 @@ mod tests {
     }
 
     #[test]
+    fn base_args_add_cookies_only_when_set() {
+        let mut y = YtDlp {
+            binary: "yt-dlp".into(),
+            cookies_browser: None,
+            js_runtime: None,
+        };
+        assert_eq!(y.base_args(true), vec!["--ignore-config"]);
+        y.cookies_browser = Some("firefox".into());
+        assert_eq!(y.base_args(false), vec!["--ignore-config"]);
+        assert_eq!(
+            y.base_args(true),
+            vec!["--ignore-config", "--cookies-from-browser", "firefox"]
+        );
+        y.js_runtime = Some(("node".into(), "/x/node".into()));
+        assert_eq!(
+            y.base_args(false),
+            vec!["--ignore-config", "--js-runtimes", "node:/x/node"]
+        );
+        let bot = classify_error("ERROR: Sign in to confirm you're not a bot");
+        assert!(y.retry_with_cookies(&bot, false));
+        assert!(!y.retry_with_cookies(&bot, true));
+        assert!(!y.retry_with_cookies(&classify_error("ERROR: Private video"), false));
+        y.cookies_browser = None;
+        assert!(!y.retry_with_cookies(&bot, false));
+    }
+
+    #[test]
     fn classifies_errors() {
         assert!(classify_error("ERROR: Unable to download video subtitles for 'en': HTTP Error 429: Too Many Requests")
             .message
@@ -953,6 +1152,33 @@ mod tests {
         assert_eq!(
             classify_error("ERROR: [youtube] x: Video unavailable").code,
             ErrorCode::NotFound
+        );
+        let bot = "ERROR: [youtube] UzzcUS2OHqo: Sign in to confirm you\u{2019}re not a bot. This helps \
+                   protect our community. Use --cookies-from-browser or --cookies for the authentication.";
+        let e = classify_error(bot);
+        assert_eq!(e.code, ErrorCode::SignInRequired);
+        assert!(e.message.contains("Use browser cookies"));
+        let no_js = classify_error_with(
+            "ERROR: [youtube] x: Requested format is not available",
+            None,
+            false,
+        );
+        assert!(no_js.message.contains("Node.js"));
+        assert!(
+            !classify_error("ERROR: [youtube] x: Requested format is not available")
+                .message
+                .contains("Node.js")
+        );
+        assert_eq!(
+            node_version(Path::new("/h/.nvm/versions/node/v24.10.0/bin")),
+            (24, 10, 0)
+        );
+        let e = classify_error_with(bot, Some("firefox"), true);
+        assert_eq!(e.code, ErrorCode::SignInRequired);
+        assert!(e.message.contains("firefox"));
+        assert_eq!(
+            classify_error("ERROR: [youtube] x: Sign in to confirm you're not a bot").code,
+            ErrorCode::SignInRequired
         );
         assert!(
             classify_error("ERROR: something odd")

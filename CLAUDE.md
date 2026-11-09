@@ -78,6 +78,7 @@
   - yt-dlp spends 40+ s extracting before the first byte, so the UI shows "Downloading 0%" for a while; that's normal
   - progress uses `--print before_dl:LECTERNSIZE|…` (expected total) and `--progress-template download:LECTERN|…`, combined across the video and audio streams by `ProgressTracker`
   - a live test exists: `cargo test --lib -- --ignored live_download --nocapture` (about 150 MB, ~2.5 min)
+- **Moving the data folder:** media paths (`lessons.local_video_path`/`thumbnail_path`, `materials.local_path`, `courses.cover_path`) are stored absolute. `repo/relocate.rs::rebase_media_paths` rewrites ones from another data dir onto `<data_dir>/media/<rel>` (only if the file exists) at startup, after restore and after JSON import. Add any new path column to `PATH_COLUMNS`.
 - **Binaries:**
   - `paths::locate_binary` finds yt-dlp/ffmpeg/ffprobe in order: data_dir/bin → next to the executable → PATH
   - packaged apps need the sidecars, because macOS GUI apps get a minimal PATH; run `pnpm fetch-binaries` before `tauri build`
@@ -88,7 +89,12 @@
   - `services/ytdlp.rs::choose_track` picks one track: manual → `<pref>-orig` → any `-orig` → translated
   - a full fetch takes ~30–70 s, mostly the `-J` probe; the UI says so
   - a live test exists: `cargo test --lib -- --ignored live_transcript`
-- **yt-dlp warns "No supported JavaScript runtime"** (deno). Metadata and subtitles still work. The Phase 3 spike showed 720p downloads work without one (~2 MB/s), so no runtime is bundled.
+- **YouTube bot check ("Sign in to confirm you're not a bot"):**
+  - `classify_error_with` maps it to `ErrorCode::SignInRequired` (not retried automatically); the Downloads row links to Settings
+  - the fix is the Advanced, off-by-default "Use browser cookies" setting (`ytdlp_cookies_browser`, SPEC §7.9): `AppState::ytdlp()` reads it on every call, so never call `ytdlp()` while holding `db()`
+  - cookies are a **fallback**: each call runs without them first and retries with them only on `SignInRequired` (`retry_with_cookies`)
+  - signed-in requests need YouTube's JS "n" challenge solved, or yt-dlp only sees storyboards ("Requested format is not available"). `find_js_runtime` looks for deno/node/bun (data_dir/bin, next to exe, PATH, then ~/.deno, ~/.bun, ~/.volta, Homebrew, newest nvm) and `base_args` passes `--js-runtimes name:path`
+- **yt-dlp warns "No supported JavaScript runtime"** when none is found. Anonymous metadata, subtitles and 720p downloads still work without one, so none is bundled; cookie requests do need one (see bot check above).
 - **YouTube auto-caption VTT is "rolling":**
   - each cue repeats the previous line plus new words with inline `<00:00:01.840><c>` tags, and there are 10 ms snapshot cues
   - `vtt::parse(…, rolling=true)` dedupes; manual subs must use `rolling=false`

@@ -36,6 +36,7 @@ pub async fn backup_now(state: State<'_, AppState>) -> AppResult<BackupInfo> {
 #[specta::specta]
 pub async fn restore_backup(state: State<'_, AppState>, path: String) -> AppResult<String> {
     let safety = backup::restore(&state, &PathBuf::from(path))?;
+    crate::db::repo::relocate::rebase_and_log(&*state.db()?, &state.paths.data_dir);
     Ok(safety.to_string_lossy().into_owned())
 }
 
@@ -65,5 +66,7 @@ pub async fn import_library_json(
         BackupKind::Safety,
         Local::now().naive_local(),
     )?;
-    backup::import_json(&conn, &v)
+    let summary = backup::import_json(&conn, &v)?;
+    crate::db::repo::relocate::rebase_and_log(&conn, &state.paths.data_dir);
+    Ok(summary)
 }

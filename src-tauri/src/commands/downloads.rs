@@ -16,7 +16,7 @@ use crate::services::downloads::{
 };
 use crate::services::media::{Ffmpeg, dir_size, remove_dir_within};
 use crate::services::updater::{self, UpdateResult};
-use crate::services::ytdlp::{Quality, StopReason};
+use crate::services::ytdlp::{COOKIE_BROWSERS, COOKIES_BROWSER_KEY, Quality, StopReason};
 use crate::state::AppState;
 
 type Mgr<'a> = State<'a, Arc<DownloadManager>>;
@@ -321,6 +321,10 @@ pub struct DownloadSettings {
     pub quality: Quality,
     pub concurrency: i32,
     pub notice_acknowledged: bool,
+    /// Advanced, off by default (SPEC §7.9): browser for yt-dlp's `--cookies-from-browser`.
+    #[specta(optional)]
+    #[serde(default)]
+    pub cookies_browser: Option<String>,
 }
 
 #[tauri::command]
@@ -335,6 +339,8 @@ pub async fn get_download_settings(state: State<'_, AppState>) -> AppResult<Down
             .unwrap_or(2)
             .clamp(1, 4),
         notice_acknowledged: settings::get::<bool>(&conn, NOTICE_KEY)?.unwrap_or(false),
+        cookies_browser: settings::get::<String>(&conn, COOKIES_BROWSER_KEY)?
+            .filter(|b| COOKIE_BROWSERS.contains(&b.as_str())),
     })
 }
 
@@ -345,8 +351,21 @@ pub async fn set_download_settings(
     mgr: Mgr<'_>,
     settings_in: DownloadSettings,
 ) -> AppResult<()> {
+    let cookies = settings_in
+        .cookies_browser
+        .filter(|b| !b.is_empty())
+        .map(|b| b.to_ascii_lowercase());
+    if let Some(b) = &cookies
+        && !COOKIE_BROWSERS.contains(&b.as_str())
+    {
+        return Err(AppError::invalid(format!(
+            "unsupported browser for cookies: {b} (use one of {})",
+            COOKIE_BROWSERS.join(", ")
+        )));
+    }
     let conn = state.db()?;
     settings::set(&conn, QUALITY_KEY, settings_in.quality.as_str())?;
+    settings::set(&conn, COOKIES_BROWSER_KEY, &cookies)?;
     settings::set(&conn, CONCURRENCY_KEY, &settings_in.concurrency.clamp(1, 4))?;
     settings::set(&conn, NOTICE_KEY, &settings_in.notice_acknowledged)?;
     mgr.wake();

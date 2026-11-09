@@ -29,7 +29,7 @@ import {
 import { createYouTubeAdapter } from "@/lib/youtube-iframe";
 import { registerFlusher } from "@/lib/flush";
 import { useHotkeys } from "@/lib/hotkeys";
-import { commands } from "@/lib/api";
+import { commands, errorMessage } from "@/lib/api";
 import { formatTimestamp } from "@/lib/time";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/misc";
@@ -194,7 +194,7 @@ export function StudyPlayer({
           }),
         ];
       })
-      .catch((e: unknown) => !cancelled && setError(e instanceof Error ? e.message : String(e)));
+      .catch((e: unknown) => !cancelled && setError(errorMessage(e)));
 
     const onHide = () => document.visibilityState === "hidden" && void saver.flush();
     document.addEventListener("visibilitychange", onHide);

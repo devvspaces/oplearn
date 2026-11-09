@@ -13,6 +13,7 @@ pub mod modules;
 pub mod notebooks;
 pub mod progress;
 pub mod quiz;
+pub mod relocate;
 pub mod restructure;
 pub mod search;
 pub mod settings;

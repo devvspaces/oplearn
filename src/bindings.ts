@@ -529,6 +529,8 @@ export type DownloadSettings = {
 	quality: Quality,
 	concurrency: number,
 	noticeAcknowledged: boolean,
+	/**  Advanced, off by default (SPEC §7.9): browser for yt-dlp's `--cookies-from-browser`. */
+	cookiesBrowser?: string | null,
 };
 
 export type DownloadStatus = "queued" | "running" | "paused" | "done" | "error";
@@ -547,7 +549,9 @@ export type DurationFilter =
 /**  Over 20 minutes. */
 "long";
 
-export type ErrorCode = "db" | "io" | "http" | "quota" | "yt_dlp" | "yt_dlp_missing" | "not_found" | "invalid" | "keyring" | "cancelled" | "timeout" | "internal";
+export type ErrorCode = "db" | "io" | "http" | "quota" | "yt_dlp" | "yt_dlp_missing" | 
+/**  YouTube's "Sign in to confirm you're not a bot" check. */
+"sign_in_required" | "not_found" | "invalid" | "keyring" | "cancelled" | "timeout" | "internal";
 
 export type Fact = {
 	label: string,

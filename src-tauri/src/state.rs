@@ -21,6 +21,8 @@ pub struct AppState {
 impl AppState {
     pub fn new(paths: Paths, loopback: crate::services::player_server::Server) -> AppResult<Self> {
         let db = crate::db::open(&paths.db_file())?;
+        // The data folder may have moved (e.g. to an external drive) since paths were stored.
+        crate::db::repo::relocate::rebase_and_log(&db, &paths.data_dir);
         let http = reqwest::Client::builder()
             .user_agent(concat!("Lectern/", env!("CARGO_PKG_VERSION")))
             .timeout(std::time::Duration::from_secs(30))
@@ -41,8 +43,18 @@ impl AppState {
             .map_err(|_| AppError::internal("database lock poisoned"))
     }
 
+    /// Locates yt-dlp and applies the user's cookies setting. Briefly locks the DB, so never
+    /// call it while holding `db()`.
     pub fn ytdlp(&self) -> AppResult<YtDlp> {
-        YtDlp::locate(&self.paths.bin_dir())
+        let mut y = YtDlp::locate(&self.paths.bin_dir())?;
+        y.cookies_browser = crate::db::repo::settings::get::<String>(
+            &*self.db()?,
+            crate::services::ytdlp::COOKIES_BROWSER_KEY,
+        )
+        .ok()
+        .flatten()
+        .filter(|b| crate::services::ytdlp::COOKIE_BROWSERS.contains(&b.as_str()));
+        Ok(y)
     }
 
     pub fn api_key(&self) -> AppResult<Option<String>> {

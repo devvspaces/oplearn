@@ -12,6 +12,8 @@ pub enum ErrorCode {
     Quota,
     YtDlp,
     YtDlpMissing,
+    /// YouTube's "Sign in to confirm you're not a bot" check.
+    SignInRequired,
     NotFound,
     Invalid,
     Keyring,

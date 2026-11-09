@@ -400,6 +400,16 @@ test("Settings lists backups and backs up on demand", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Export library…" })).toBeVisible();
 });
 
+test("Settings → Downloads → Advanced saves the cookies browser", async ({ page }) => {
+  await page.goto("/#/settings");
+  await page.getByText("Advanced", { exact: true }).click();
+  await expect(page.getByText(/may violate YouTube/)).toBeVisible();
+  await page.getByLabel("Use browser cookies").selectOption("firefox");
+  await expect
+    .poll(async () => (await calls(page, "set_download_settings")).at(-1))
+    .toMatchObject({ args: { settingsIn: { cookiesBrowser: "firefox" } } });
+});
+
 test("material page renders the PDF with pdf.js at the requested page", async ({ page }) => {
   await page.goto("/#/materials/mat1?page=2");
   await expect(page.getByText("of 4")).toBeVisible();

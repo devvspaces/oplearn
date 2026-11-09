@@ -20,6 +20,18 @@ import { BackupSettings } from "@/features/settings/BackupSettings";
 
 export const Route = createFileRoute("/settings")({ component: SettingsPage });
 
+/** Mirrors `services::ytdlp::COOKIE_BROWSERS`. */
+const COOKIE_BROWSERS = [
+  ["firefox", "Firefox"],
+  ["chrome", "Chrome"],
+  ["safari", "Safari"],
+  ["edge", "Edge"],
+  ["brave", "Brave"],
+  ["chromium", "Chromium"],
+  ["opera", "Opera"],
+  ["vivaldi", "Vivaldi"],
+] as const;
+
 function Section({
   title,
   description,
@@ -294,6 +306,42 @@ function SettingsPage() {
               </select>
             </label>
           </div>
+        )}
+        {dl.data && (
+          <details
+            id="cookies"
+            className="mt-4 rounded-lg border p-3 text-sm"
+            open={!!dl.data.cookiesBrowser || undefined}
+          >
+            <summary className="cursor-pointer text-xs font-medium">Advanced</summary>
+            <p className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-300">
+              If YouTube says &ldquo;Sign in to confirm you&rsquo;re not a bot&rdquo;, yt-dlp can use your
+              browser&rsquo;s YouTube cookies. This may violate YouTube&rsquo;s Terms and can put your
+              account at risk. Lectern never asks for or stores your password; cookies are read from the
+              browser on each request.
+            </p>
+            <label className="mt-3 flex items-center gap-2">
+              Use browser cookies
+              <select
+                aria-label="Use browser cookies"
+                value={dl.data.cookiesBrowser ?? ""}
+                onChange={(e) => void saveDl({ cookiesBrowser: e.target.value || null })}
+                className="rounded-md border bg-background px-2 py-1 text-xs"
+              >
+                <option value="">Off</option>
+                {COOKIE_BROWSERS.map(([v, label]) => (
+                  <option key={v} value={v}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Sign in to YouTube in that browser first. On macOS, Chrome, Edge and Brave ask once for
+              Keychain access (&ldquo;Safe Storage&rdquo;); Safari needs Full Disk Access for Lectern;
+              Firefox works without prompts.
+            </p>
+          </details>
         )}
         <p className="mt-3 text-xs text-muted-foreground">
           Using {formatBytes(storage.data?.totalBytes) || "0 B"} for downloaded media.{" "}

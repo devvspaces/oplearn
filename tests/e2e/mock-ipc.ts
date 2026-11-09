@@ -136,7 +136,7 @@ export function installMockIpc() {
     // `ask()` goes through `message` and compares the returned label with okLabel.
     "plugin:dialog|message": (a: { buttons?: { OkCancelCustom?: [string, string] } | string }) =>
       typeof a.buttons === "object" ? a.buttons.OkCancelCustom?.[0] : "Yes",
-    set_download_settings: (a: { settings: unknown }) => a.settings,
+    set_download_settings: (a: { settingsIn: unknown }) => a.settingsIn,
     enqueue_lesson_download: () => ({}),
     get_today: () => ({
       goalMin: 45,
@@ -585,7 +585,7 @@ export function installMockIpc() {
       mediaDir: "/tmp/Lectern/media",
       courses: [{ courseId: "c1", courseTitle: course.title, bytes: 312_000_000, downloadedLessons: 2 }],
     }),
-    get_download_settings: () => ({ quality: "720p", concurrency: 2, noticeAcknowledged: false }),
+    get_download_settings: () => ({ quality: "720p", concurrency: 2, noticeAcknowledged: false, cookiesBrowser: null }),
     estimate_download_size: () => ({ lessons: 3, bytes: 3_240_000_000, unknown: 0 }),
     get_player_url: () => "http://127.0.0.1:9/player",
     get_media_url: () => "http://127.0.0.1:9/media/x/video.mp4",

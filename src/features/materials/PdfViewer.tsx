@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { ChevronDown, ChevronUp, HelpCircle, Layers, Minus, MoveHorizontal, Plus, StickyNote } from "lucide-react";
-import { commands } from "@/lib/api";
+import { commands, errorMessage } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
@@ -104,7 +104,7 @@ export function PdfViewer({
         void backfillText(materialId, doc);
       } catch (e) {
         if (cancelled) return;
-        setError(e instanceof Error ? e.message : String(e));
+        setError(errorMessage(e));
         setState("error");
       }
     })();

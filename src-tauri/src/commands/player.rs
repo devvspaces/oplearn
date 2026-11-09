@@ -46,5 +46,7 @@ pub async fn get_media_url(state: State<'_, AppState>, path: String) -> AppResul
     state
         .loopback
         .media_url(std::path::Path::new(&path))
-        .ok_or_else(|| crate::error::AppError::invalid("file is outside the media folder"))
+        .ok_or_else(|| crate::error::AppError::invalid(
+            "This video's file isn't in the current data folder. Re-download it, or switch the lesson to Stream.",
+        ))
 }

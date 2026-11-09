@@ -101,6 +101,14 @@ function DownloadRow({ d }: { d: Download }) {
           <p className="mt-1 text-xs text-warning">
             {d.errorMessage}
             {retrying ? " · will retry automatically" : ""}
+            {d.errorCode === "sign_in_required" && (
+              <>
+                {" "}
+                <Link to="/settings" hash="cookies" className="text-primary hover:underline">
+                  Open settings
+                </Link>
+              </>
+            )}
           </p>
         )}
         {d.status === "done" && d.bytesTotal ? (
