@@ -1,0 +1,110 @@
+{
+ "err": false,
+ "numTotal": 3,
+ "books": [
+  {
+   "bookID": "human-354234",
+   "affiliation": "LaGuardia Community College",
+   "author": "Jessica Boehman",
+   "course": "",
+   "lastSyncedAt": "2026-11-08T14:30:00.131Z",
+   "lastUpdated": "Fri, 15 Aug 2025 15:38:31 GMT",
+   "library": "human",
+   "libraryTags": [
+    "article:topic-category",
+    "authorname:jboehman",
+    "coverpage:yes",
+    "license:publicdomain",
+    "lulu@Illustration: An Introductory Course@Jessica Boehman@LaGuardia Community College@Illustration: An Introductory Course",
+    "source@https://pressbooks.cuny.edu/illustration/"
+   ],
+   "license": "publicdomain",
+   "links": {
+    "online": "https://human.libretexts.org/Bookshelves/Art/Design_and_Applied_Arts/Illustration%3A_An_Introductory_Course_(Boehman)",
+    "pdf": "https://downloads.libretexts.org/api/v1/download/human-354234/pdf",
+    "buy": "https://commons.libretexts.org/store/product/human-354234",
+    "zip": "https://downloads.libretexts.org/api/v1/download/human-354234/pages",
+    "files": "https://downloads.libretexts.org/api/v1/download/human-354234/publication",
+    "lms": "https://downloads.libretexts.org/api/v1/download/human-354234/thincc"
+   },
+   "location": "central",
+   "program": "",
+   "subject": "Art",
+   "summary": "This book serves as a general introduction to illustration for the college-level student. In this book, students will learn the basics of putting together illustrations for various purposes, will learn about professional aspects of the field, and will consider assignments in botanical, poster, middle grade narrative, comic and picture book illustration, and illustration for self promotion.",
+   "thumbnail": "https://human.libretexts.org/@api/deki/pages/354234/files/=mindtouch.page%2523thumbnail",
+   "thumbnailIsAnimated": false,
+   "title": "Illustration: An Introductory Course",
+   "shelfPath": "Bookshelves/Art/Design_and_Applied_Arts/Illustration:_An_Introductory_Course_(Boehman)"
+  },
+  {
+   "bookID": "chem-434462",
+   "affiliation": "Solano College",
+   "author": "Commodore St Germain",
+   "course": "Solano Community College",
+   "lastUpdated": "Tue, 13 Oct 2026 15:06:48 GMT",
+   "library": "chem",
+   "libraryTags": [
+    "article:topic-category",
+    "coverpage:yes",
+    "lulu@Introductory Chemistry@Commodore St Germain@Solano College@Introductory Chemistry",
+    "source[1]-chem-393968",
+    "source[1]-chem-407998",
+    "source[1]-chem-417552",
+    "stage:final"
+   ],
+   "license": "",
+   "links": {
+    "online": "https://chem.libretexts.org/Courses/Solano_Community_College/Introductory_Chemistry_at_Solano_College_-_Updated_2023_04_03",
+    "pdf": "https://downloads.libretexts.org/api/v1/download/chem-434462/pdf",
+    "buy": "https://commons.libretexts.org/store/product/chem-434462",
+    "zip": "https://downloads.libretexts.org/api/v1/download/chem-434462/pages",
+    "files": "https://downloads.libretexts.org/api/v1/download/chem-434462/publication",
+    "lms": "https://downloads.libretexts.org/api/v1/download/chem-434462/thincc"
+   },
+   "location": "campus",
+   "program": "",
+   "subject": "",
+   "summary": "",
+   "thumbnail": "https://chem.libretexts.org/@api/deki/pages/434462/files/=mindtouch.page%2523thumbnail",
+   "title": "Introductory Chemistry",
+   "trafficAnalyticsConfigured": true,
+   "thumbnailIsAnimated": false,
+   "lastSyncedAt": "2026-11-08T14:30:00.131Z",
+   "shelfPath": "Courses/Solano_Community_College/Introductory_Chemistry_at_Solano_College_-_Updated_2023_04_03"
+  },
+  {
+   "bookID": "human-391750",
+   "affiliation": "Northern Illinois University",
+   "author": "Nancy Dom\u00ednguez-Fret and Megan Tzeitel Marshall",
+   "course": "Northern Illinois University",
+   "lastUpdated": "Tue, 22 Sep 2026 16:43:01 GMT",
+   "library": "human",
+   "libraryTags": [
+    "article:topic-category",
+    "authorname:ndfmtm",
+    "coverpage:yes",
+    "license:ccby",
+    "licenseversion:40",
+    "lulu@Voces que cruzan fronteras: nuestra comunidad y la identidad multiling\u00fce I@Nancy Dom\u00ednguez-Fret and Megan Tzeitel Marshall@Northern Illinois University@Voces que cruzan fronteras: nuestra comunidad y la identidad multiling\u00fce I"
+   ],
+   "license": "ccby",
+   "links": {
+    "online": "https://human.libretexts.org/Courses/Northern_Illinois_University/Voces_que_cruzan_fronteras%3A_nuestra_comunidad_y_la_identidad_multiling%C3%BCe_I",
+    "pdf": "https://downloads.libretexts.org/api/v1/download/human-391750/pdf",
+    "buy": "https://commons.libretexts.org/store/product/human-391750",
+    "zip": "https://downloads.libretexts.org/api/v1/download/human-391750/pages",
+    "files": "https://downloads.libretexts.org/api/v1/download/human-391750/publication",
+    "lms": "https://downloads.libretexts.org/api/v1/download/human-391750/thincc"
+   },
+   "location": "campus",
+   "program": "",
+   "subject": "",
+   "summary": "Part One of this textbook draws on the stories and histories of the Latinx community in the Chicago area to engage students in exploring language and identity while building on and expanding their existing language skills. Its goal is to strengthen and support students\u2019 linguistic and sociocultural connections to Spanish-speaking communities. This textbook can be used as a stand-alone curriculum or as a resource to enhance and expand an existing curriculum.",
+   "thumbnail": "https://human.libretexts.org/@api/deki/pages/391750/files/=mindtouch.page%2523thumbnail",
+   "title": "Voces que cruzan fronteras: nuestra comunidad y la identidad multiling\u00fce I",
+   "thumbnailIsAnimated": false,
+   "lastSyncedAt": "2026-11-08T14:30:00.131Z",
+   "shelfPath": "Courses/Northern_Illinois_University/Voces_que_cruzan_fronteras:_nuestra_comunidad_y_la_identidad_multiling\u00fce_I"
+  }
+ ]
+}

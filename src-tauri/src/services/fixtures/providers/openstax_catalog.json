@@ -1,0 +1,207 @@
+{
+ "meta": {
+  "total_count": 4
+ },
+ "items": [
+  {
+   "id": 74,
+   "meta": {
+    "slug": "calculus-volume-1",
+    "type": "books.Book",
+    "detail_url": "https://openstax.org/apps/cms/api/v2/pages/74/",
+    "html_url": "https://openstax.org/details/books/calculus-volume-1",
+    "first_published_at": "2016-03-10T14:37:26.063000-06:00",
+    "locale": "en"
+   },
+   "title": "Calculus Volume 1",
+   "book_state": "live",
+   "cnx_id": "8b89d172-2927-466f-8661-01abc7ccdba4",
+   "book_subjects": [
+    {
+     "id": 218,
+     "meta": {
+      "type": "books.BookSubjects"
+     },
+     "subject_name": "Math",
+     "subject_search_description": "Math"
+    }
+   ],
+   "description": "<p data-block-key=\"esja3\"><i>Calculus</i> is designed for the typical two- or three-semester general calculus course, incorporating innovative features to enhance student learning. The book guides students through the core concepts of calculus and helps them understand how those concepts apply to th",
+   "cover_url": "https://assets.openstax.org/oscms-prodcms/media/documents/calculus-v1.svg",
+   "authors": [
+    {
+     "type": "author",
+     "value": {
+      "name": "Gilbert Strang",
+      "university": "Massachusetts Institute of Technology",
+      "country": "",
+      "senior_author": true,
+      "display_at_top": true
+     },
+     "id": "845fc674-e2bd-41d6-833a-09605def9d8b"
+    },
+    {
+     "type": "author",
+     "value": {
+      "name": "Joseph Lakey",
+      "university": "New Mexico State University",
+      "country": "",
+      "senior_author": false,
+      "display_at_top": false
+     },
+     "id": "da1be78c-f4f8-47ae-86ac-9f1e00d503dd"
+    }
+   ],
+   "license_name": "Creative Commons Attribution-NonCommercial-ShareAlike License",
+   "license_url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+   "high_resolution_pdf_url": "https://assets.openstax.org/oscms-prodcms/media/documents/calculus-volume-1_-_WEB.pdf"
+  },
+  {
+   "id": 38,
+   "meta": {
+    "slug": "algebra-and-trigonometry",
+    "type": "books.Book",
+    "detail_url": "https://openstax.org/apps/cms/api/v2/pages/38/",
+    "html_url": "https://openstax.org/details/books/algebra-and-trigonometry",
+    "first_published_at": "2016-03-09T09:53:01.890636-06:00",
+    "locale": "en"
+   },
+   "title": "Algebra and Trigonometry",
+   "book_state": "retired",
+   "cnx_id": "13ac107a-f15f-49d2-97e8-60ab2e3b519c",
+   "book_subjects": [
+    {
+     "id": 214,
+     "meta": {
+      "type": "books.BookSubjects"
+     },
+     "subject_name": "Math",
+     "subject_search_description": "Math"
+    }
+   ],
+   "description": "<p data-block-key=\"b0flc\"><i>Algebra and Trigonometry</i> provides a comprehensive exploration of algebraic principles and meets scope and sequence requirements for a typical introductory algebra and trigonometry course. The modular approach and the richness of content ensure that the book meets the",
+   "cover_url": "https://assets.openstax.org/oscms-prodcms/media/documents/algebra_trigonometry.svg",
+   "authors": [
+    {
+     "type": "author",
+     "value": {
+      "name": "Jay Abramson",
+      "university": "Arizona State University",
+      "country": "",
+      "senior_author": true,
+      "display_at_top": true
+     },
+     "id": "fda520dc-b9da-49f8-aa28-c5371cfe5267"
+    },
+    {
+     "type": "author",
+     "value": {
+      "name": "Valeree Falduto",
+      "university": "Palm Beach State College",
+      "country": "",
+      "senior_author": false,
+      "display_at_top": true
+     },
+     "id": "dbcc5721-22fa-458d-99bb-a637c613c246"
+    }
+   ],
+   "license_name": "Creative Commons Attribution License",
+   "license_url": "https://creativecommons.org/licenses/by/4.0/",
+   "high_resolution_pdf_url": "https://assets.openstax.org/oscms-prodcms/media/documents/AlgebraAndTrigonometry-OP_1tE6R5r.pdf"
+  },
+  {
+   "id": 506,
+   "meta": {
+    "slug": "college-physics-courseware",
+    "type": "books.Book",
+    "detail_url": "https://openstax.org/apps/cms/api/v2/pages/506/",
+    "html_url": "https://openstax.org/details/books/college-physics-courseware",
+    "first_published_at": "2021-03-24T13:33:46.911602-05:00",
+    "locale": "en"
+   },
+   "title": "College Physics with Courseware",
+   "book_state": "retired",
+   "cnx_id": null,
+   "book_subjects": [],
+   "description": "",
+   "cover_url": "",
+   "authors": [
+    {
+     "type": "author",
+     "value": {
+      "name": "Placeholder",
+      "university": "",
+      "country": "",
+      "senior_author": false,
+      "display_at_top": false
+     },
+     "id": "359a7886-aa9f-4429-acf1-a27d1bceb486"
+    }
+   ],
+   "license_name": null,
+   "license_url": null,
+   "high_resolution_pdf_url": null
+  },
+  {
+   "id": 873,
+   "meta": {
+    "slug": "additive-manufacturing-essentials",
+    "type": "books.Book",
+    "detail_url": "https://openstax.org/apps/cms/api/v2/pages/873/",
+    "html_url": "https://openstax.org/details/books/additive-manufacturing-essentials",
+    "first_published_at": "2025-02-18T15:26:43.439000-06:00",
+    "locale": "en"
+   },
+   "title": "Additive Manufacturing Essentials",
+   "book_state": "live",
+   "cnx_id": "851baf99-d993-44bf-8b4d-5b0cadfe2445",
+   "book_subjects": [
+    {
+     "id": 393,
+     "meta": {
+      "type": "books.BookSubjects"
+     },
+     "subject_name": "Science",
+     "subject_search_description": "Science"
+    },
+    {
+     "id": 394,
+     "meta": {
+      "type": "books.BookSubjects"
+     },
+     "subject_name": "Business",
+     "subject_search_description": "Business"
+    }
+   ],
+   "description": "<p data-block-key=\"0lgy4\"><i>Additive Manufacturing Essentials</i> is an introduction to the core principles, technologies, and methods in the field of additive manufacturing. Rooted in industry practice and innovation, the material presents examples and approaches from an array of companies, equipm",
+   "cover_url": "https://assets.openstax.org/oscms-prodcms/media/documents/additive_manufacturing_web_card.svg",
+   "authors": [
+    {
+     "type": "author",
+     "value": {
+      "name": "John E. Barnes",
+      "university": "The Barnes Global Advisors",
+      "country": "",
+      "senior_author": true,
+      "display_at_top": true
+     },
+     "id": "2cdfbaaa-afdc-4f4f-8ba2-ed91f9b07cc5"
+    },
+    {
+     "type": "author",
+     "value": {
+      "name": "Timothy E. Simpson, Ph.D.",
+      "university": "Pennsylvania State University and The Barnes Global Advisors",
+      "country": "",
+      "senior_author": true,
+      "display_at_top": false
+     },
+     "id": "f93f2118-84e9-4d13-99c2-408f0f20b7f7"
+    }
+   ],
+   "license_name": "Creative Commons Attribution-NonCommercial-ShareAlike License",
+   "license_url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+   "high_resolution_pdf_url": "https://assets.openstax.org/oscms-prodcms/media/documents/Additive_Manufacturing_Essentials_-_WEB.pdf"
+  }
+ ]
+}

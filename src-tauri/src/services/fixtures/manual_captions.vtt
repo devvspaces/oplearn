@@ -1,0 +1,21 @@
+WEBVTT
+Kind: captions
+Language: en
+
+NOTE This is a comment block
+that spans lines
+
+1
+00:00:00.500 --> 00:00:03.000
+Welcome to the course &amp; thanks
+for joining.
+
+2
+00:00:03.000 --> 00:00:05.250 align:start position:10%
+<i>Today</i> we cover <b>RPC</b>.
+
+00:01:05.000 --> 00:01:07.000
+Yes.
+
+01:00:00.000 --> 01:00:02.500
+Yes.

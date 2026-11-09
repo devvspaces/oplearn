@@ -1,0 +1,153 @@
+# Builds unsigned installers for every platform and attaches them to a draft GitHub release.
+# Cut a release: `pnpm version:set X.Y.Z`, commit, `git tag vX.Y.Z`, `git push origin master vX.Y.Z`,
+# then review and publish the draft on GitHub.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build (e.g. v0.1.0)"
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
+jobs:
+  check-version:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - name: Tag matches the app version
+        run: |
+          want="${TAG#v}"
+          pkg=$(node -p "require('./package.json').version")
+          conf=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          cargo=$(grep -m1 '^version = ' src-tauri/Cargo.toml | cut -d'"' -f2)
+          echo "tag=$want package.json=$pkg tauri.conf.json=$conf Cargo.toml=$cargo"
+          if [ "$pkg" != "$want" ] || [ "$conf" != "$want" ] || [ "$cargo" != "$want" ]; then
+            echo "::error::Tag $TAG doesn't match the app version. Run 'pnpm version:set $want', commit, and re-tag."
+            exit 1
+          fi
+
+  test:
+    needs: check-version
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            e2e: true
+          - os: macos-14
+            e2e: false
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.16.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - name: Linux system libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf unzip
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm fetch-binaries
+      - run: pnpm lint
+      - run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+      - run: pnpm test:unit
+      - run: pnpm test:rust
+      - name: Browser smoke tests
+        if: matrix.e2e
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          pnpm test:e2e
+
+  build:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            target: aarch64-apple-darwin
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.16.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: ${{ matrix.target }}
+      - name: Linux system libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf unzip
+      - run: pnpm install --frozen-lockfile
+      - name: Sidecar binaries for ${{ matrix.target }}
+        run: pnpm fetch-binaries --target ${{ matrix.target }}
+      - name: Build and upload to the draft release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ env.TAG }}
+          releaseName: "Lectern v__VERSION__"
+          releaseDraft: true
+          prerelease: false
+          args: --target ${{ matrix.target }}
+          releaseBody: |
+            ## Downloads
+            - **macOS (Apple silicon, M1 and later):** `Lectern_*_aarch64.dmg`
+            - **macOS (Intel):** `Lectern_*_x64.dmg`
+            - **Windows:** `Lectern_*_x64-setup.exe` (or the `.msi`)
+            - **Linux:** `Lectern_*_amd64.AppImage` or `Lectern_*_amd64.deb`
+
+            ## First launch (these builds aren't signed by Apple or Microsoft)
+            - **macOS:** drag Lectern to Applications, then right-click it → **Open** → **Open**. If macOS says the app "is damaged" or still refuses, run `xattr -dr com.apple.quarantine /Applications/Lectern.app` in Terminal, or use System Settings → Privacy & Security → **Open Anyway**.
+            - **Windows:** if SmartScreen appears, click **More info** → **Run anyway**.
+            - **Linux:** `chmod +x Lectern_*.AppImage` and run it, or `sudo apt install ./Lectern_*.deb`.
+
+            Your library is stored in `~/Lectern` (you can choose another folder on first launch).

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="referrer" content="strict-origin-when-cross-origin" />
+<title>Lectern player</title>
+<style>html,body,#p{margin:0;width:100%;height:100%;background:#000;overflow:hidden}iframe{width:100%;height:100%;border:0}</style>
+</head>
+<body>
+<div id="p"></div>
+<script>
+// Bridge between the Lectern app (parent window) and the official YouTube IFrame API.
+// Served from a loopback http origin so YouTube receives a valid referrer (error 152/153 otherwise).
+(function () {
+  "use strict";
+  var NS = "lectern-player";
+  var q = new URLSearchParams(location.search);
+  var videoId = q.get("v") || "";
+  var start = Math.max(0, Math.floor(Number(q.get("start")) || 0));
+  var rate = Number(q.get("rate")) || 1;
+  var player = null, poll = null;
+  var STATES = { "-1": "unstarted", "0": "ended", "1": "playing", "2": "paused", "3": "buffering", "5": "unstarted" };
+
+  function post(msg) { msg.ns = NS; window.parent.postMessage(msg, "*"); }
+  function now() { return player && player.getCurrentTime ? player.getCurrentTime() : 0; }
+  function dur() { return player && player.getDuration ? player.getDuration() : 0; }
+
+  if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) { post({ type: "error", code: 2 }); return; }
+
+  window.addEventListener("message", function (e) {
+    if (e.source !== window.parent || !e.data || e.data.ns !== NS || !player) return;
+    var d = e.data;
+    switch (d.cmd) {
+      case "play": player.playVideo(); break;
+      case "pause": player.pauseVideo(); break;
+      case "seek": player.seekTo(Math.max(0, Number(d.value) || 0), true); setTimeout(function () { post({ type: "time", time: now() }); }, 60); break;
+      case "rate": player.setPlaybackRate(Number(d.value) || 1); break;
+      case "volume": player.setVolume(Math.round(Math.max(0, Math.min(1, Number(d.value))) * 100)); break;
+    }
+  });
+
+  window.onYouTubeIframeAPIReady = function () {
+    player = new YT.Player("p", {
+      host: "https://www.youtube-nocookie.com",
+      videoId: videoId,
+      width: "100%", height: "100%",
+      playerVars: { autoplay: 0, start: start, rel: 0, playsinline: 1, enablejsapi: 1, origin: location.origin,
+                    disablekb: 1, controls: 0, iv_load_policy: 3 },
+      events: {
+        onReady: function () {
+          if (rate !== 1) player.setPlaybackRate(rate);
+          post({ type: "ready", duration: dur(), time: now() });
+        },
+        onStateChange: function (e) {
+          var s = STATES[String(e.data)] || "unstarted";
+          if (s === "playing" && !poll) poll = setInterval(function () { post({ type: "time", time: now() }); }, 250);
+          if (s !== "playing" && poll) { clearInterval(poll); poll = null; }
+          post({ type: "state", state: s, time: now(), duration: dur() });
+        },
+        onPlaybackRateChange: function (e) { post({ type: "rate", rate: e.data }); },
+        onError: function (e) { post({ type: "error", code: e.data }); }
+      }
+    });
+  };
+  var s = document.createElement("script");
+  s.src = "https://www.youtube.com/iframe_api";
+  s.onerror = function () { post({ type: "error", code: -1 }); };
+  document.head.appendChild(s);
+})();
+</script>
+</body>
+</html>

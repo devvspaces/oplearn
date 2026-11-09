@@ -1,0 +1,74 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Lectern",
+  "version": "0.1.0",
+  "identifier": "com.lectern.app",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:1430",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Lectern",
+        "width": 1320,
+        "height": 860,
+        "minWidth": 960,
+        "minHeight": 600,
+        "theme": "Dark",
+        "backgroundColor": "#0b0d12"
+      }
+    ],
+    "security": {
+      "csp": {
+        "default-src": "'self'",
+        "script-src": "'self'",
+        "frame-src": "http://127.0.0.1:*",
+        "img-src": "'self' asset: http://asset.localhost http://127.0.0.1:* https://i.ytimg.com https://*.ggpht.com https://assets.openstax.org data: blob:",
+        "media-src": "'self' asset: http://asset.localhost blob: http://127.0.0.1:*",
+        "style-src": "'self' 'unsafe-inline'",
+        "font-src": "'self' data: blob:",
+        "connect-src": "'self' ipc: http://ipc.localhost http://127.0.0.1:*",
+        "worker-src": "'self' blob:"
+      },
+      "devCsp": {
+        "default-src": "'self'",
+        "script-src": "'self' 'unsafe-inline'",
+        "frame-src": "http://127.0.0.1:*",
+        "img-src": "'self' asset: http://asset.localhost http://127.0.0.1:* https://i.ytimg.com https://*.ggpht.com https://assets.openstax.org data: blob:",
+        "media-src": "'self' asset: http://asset.localhost blob: http://127.0.0.1:*",
+        "style-src": "'self' 'unsafe-inline'",
+        "font-src": "'self' data: blob:",
+        "connect-src": "'self' ipc: http://ipc.localhost ws://localhost:1430 ws://localhost:1431 http://127.0.0.1:*",
+        "worker-src": "'self' blob:"
+      },
+      "assetProtocol": {
+        "enable": true,
+        "scope": []
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Education",
+    "macOS": {
+      "signingIdentity": "-"
+    },
+    "shortDescription": "Turn YouTube playlists into courses you own",
+    "externalBin": [
+      "binaries/yt-dlp",
+      "binaries/ffmpeg",
+      "binaries/ffprobe"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}

@@ -1,0 +1,122 @@
+# CLAUDE.md: working notes for Lectern
+
+`SPEC.md` is the source of truth. Work phase by phase (§12). Log any deviation in SPEC §16 in the same commit.
+
+## Commands
+- `pnpm app`: Tauri dev. Vite runs on **:1430** (1420 is used by other local Tauri projects).
+- `pnpm test`: runs vitest, then `cargo test`, then the Playwright smoke tests. Playwright builds and previews on :4173.
+- `pnpm lint`: eslint + tsc. Run `cargo clippy --manifest-path src-tauri/Cargo.toml` as well.
+- `pnpm bindings`: regenerates `src/bindings.ts` (also written on every debug app start). **Run it after changing any command or model type.**
+- `pnpm fetch-binaries`: fetches the yt-dlp, ffmpeg and ffprobe sidecars (SHA-256 verified). Required before `cargo build`, because `externalBin` must exist.
+- `pnpm seed`: imports the demo playlist into the real `~/Lectern`.
+
+## Architecture
+- **Rust owns everything stateful.**
+  - `db/repo/*` are plain functions over `&Connection`. Test them against `db::open_in_memory()`.
+  - Commands in `commands/*` are thin. They lock `AppState::db()` and call repos.
+  - Never hold the DB mutex across an `.await`. Fetch from the network first, then lock.
+  - Register every new command in `lib.rs::specta_builder`.
+- **Migrations:** `src-tauri/migrations/NNNN_*.sql`, listed in `db::MIGRATIONS`. Never edit a released migration; add a new one.
+- **yt-dlp:** only `services/ytdlp.rs` spawns it.
+  - Binary resolution order: `<data_dir>/bin` (updater) → next to the executable (sidecar) → PATH.
+  - Cancellation means dropping the future (`kill_on_drop`).
+- **Imports:** the Data API is tried first when a key is set. Any error except NotFound falls back to yt-dlp.
+- **Renderer:**
+  - TanStack Query wraps `commands.*` (`src/lib/api.ts`). Mutations go through `useLibraryMutation`, which invalidates courses/course/lesson.
+  - Pure logic lives in `src/lib/*` and `src/features/*/layout.ts`, with tests in `tests/unit`.
+- **Player:** `PlayerAdapter` (`src/lib/player-adapter.ts`).
+  - Stream mode uses `youtube-iframe.ts`, which drives the loopback bridge page (official IFrame API, youtube-nocookie host, `controls: 0`, with our own control bar).
+  - A transparent overlay over the iframe keeps keyboard focus in our document, so hotkeys keep working.
+- **Shutdown:** Rust emits `flush-request` on close/quit. `src/lib/flush.ts` runs the registered flushers, then `flush_complete`. There is a 1.5 s safety timeout.
+
+## Gotchas
+- **Progress (Phase 4):**
+  - `features/player/watch-tracker.ts` turns time updates into segments (continuous while Δ < 2 s × rate) and wall seconds; StudyPlayer sends them every 10 s, on pause, on unmount and on quit (`record_watch`)
+  - `repo/study.rs::record_watch` merges intervals, auto-completes at `completion_threshold` (never un-completes) and adds playback seconds to `study_sessions`; it emits `LessonCompleted`
+  - "days" are local calendar days (`chrono::Local`); DB timestamps stay UTC; sessions split after a 10 min gap or a day change
+  - `lessons::set_completed` also flips `plan_items.done`; `rebalance` keeps rows for completed lessons
+  - streak: one freeze per ISO week, never two misses in a row; today never breaks a streak
+  - reminders: `services/reminders.rs` loop (30 s tick); Settings → Study → "Send a test notification"
+- **Search / accounts (Phase 5):**
+  - every Data API call counts units (`YouTubeApi.units`, `commands::import::record_units`); search = 100
+  - search cache: 24 h per normalised query (`repo/yt_search.rs`)
+  - OAuth: `services/oauth.rs` (PKCE + one-shot loopback listener, 5 min timeout); refresh token in keychain `google_refresh_token`; an `invalid_grant` refresh forgets it
+- **Flashcards:** SM-2 in `services/sm2.rs`; "Again" makes a card due in 10 min; `review_flashcard` logs up to 120 s of review time.
+- **AI platform:** every call goes through `services::ai::run(state, Call)`, which checks enabled + key + the monthly budget (`check_budget`), sends a structured-output request (`output_config.format`, `fallbacks: "default"`, effort medium) and records usage in `ai_usage`, failed calls included. Estimates (`commands::ai::to_estimate`) are local only.
+- **AI anchors:** `services/ai_context.rs` renders material as `[T:L1@754]` (transcript window), `[N:L1@754]` (note) and `[P:M1#3]` (PDF page). `Context::resolve` maps them back and snaps times to 30 s windows; invalid anchors are dropped, never guessed.
+- **MIT OCW:**
+  - import source is the offline ZIP (`/courses/<slug>/<short_id>.zip`, linked from `/download/`). Only `data.json`, `content_map.json`, `pages/`, `resources/`, `video_galleries/` and `static_resources/` are extracted, and `extract_zip` refuses zip-slip paths
+  - `resources/<dir>/data.json` → `OcwResource` (`kind()`, `is_solution()`); the calendar table → modules split at rows whose key dates mention due/exam, with problem sets due at a row joined to that module (`plan_structure`)
+  - solutions pair by same table row first, then by file code (`assn03_sol` ↔ `assn03`)
+  - the import builds into `media/.incoming/<slug>`, then moves to `media/<course slug>/ocw` and rewrites stored paths
+  - page HTML is sanitised and links rewritten (`#material:<id>`, `#page:<section>`, otherwise absolute OCW URLs) in `ocw_import::rewrite_html`
+  - real-course check: `OCW_DIR=<extracted zip> cargo test --lib -- --ignored ocw_real_folder --nocapture`
+  - PDF text: `services/pdf_text.rs` runs our own binary as `lectern --extract-pdf-text <file>` (handled in `main.rs` before Tauri starts), 3 at a time, 20 s each; failures are skipped and logged. Check the real helper: `PDF_PATH=<file.pdf> cargo test --test pdf_helper -- --ignored --nocapture`
+- **PDF viewer:** `features/materials/PdfViewer.tsx` (pdf.js 4.10, lazy-loaded by `pdfjs.ts`; the viewer bundle needs `globalThis.pdfjsLib` set first). Fonts/CMaps are copied to `public/pdfjs/` by a Vite plugin. It fetches the loopback `/media` URL, so `serve_media` sends CORS headers for the `FRAME_ANCESTORS` origins and answers `OPTIONS`; the CSP has `connect-src http://127.0.0.1:*` and `worker-src 'self' blob:`. `usePdfNav` (`pdf-nav.ts`) holds the open document and page, the way `player` holds the video time.
+- **Page anchors:** a note or card points at a video time **or** a (material, page) pair; `page` requires `material_id` and must be within `page_count` (`repo/annotations::check_page`). Links use `/lessons/$id?doc=<material>&page=N` (`lib/anchors.ts::anchorSearch`); if `doc` isn't the lesson's own document, the lesson route redirects to `/materials/$id?page=N`.
+- **Plan order:** `courses.plan_order` is `outline` or `custom`. `apply_plan` (AI) sets `custom`, and `rebalance` then orders open lessons by their current `planned_date, created_at` (rows get millisecond-spaced `created_at` to keep order within a day). `set_plan_order` and `restructure::apply` switch back to `outline`.
+- **AI assist:** `services/ai_assist.rs` (pure: prompts, `focus_material` windows, `render_anchors`) + `commands/ai_assist.rs` (`estimate_assist`/`run_assist` for explain|answer|summary, references). `AssistDialog` is the shared estimate → generate → save dialog. AI-made annotations use `annotations::create_with(.., true)` / `set_ai_answer`.
+- **Backups:** `services/backup.rs`. `VACUUM INTO` snapshots named `library-YYYYMMDD-HHMMSS-{daily|manual|safety}.db`; the hourly loop makes a daily one when due and prunes to 7. `restore_into` validates (integrity, version ≤ ours, core tables), takes a safety backup, swaps the live connection for in-memory, renames the file in and reopens (migrations run). JSON export/import uses `EXPORT_TABLES` (FK order); a test fails if a new table isn't listed there or in `SKIPPED_TABLES`. FTS tables refill through their triggers; PDF page text is exported separately.
+- **Onboarding:** settings key `onboarded`; `__root` redirects to `/welcome` while it's false (the e2e mock reads `window.__freshInstall`). `restart_app` calls `AppHandle::request_restart`.
+- **CI / releases:** `.github/workflows/build.yml` runs on pushes to `master` and PRs (tests on ubuntu + macos, installers on 4 targets as artifacts). `release.yml` runs on `v*` tags: the tag must equal the version in package.json, tauri.conf.json and Cargo.toml (`pnpm version:set X.Y.Z` sets all three), then it uploads installers to a draft release. macOS is ad-hoc signed only (no notarisation). Linux needs `libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf unzip`.
+- **Providers (NPTEL, OpenStax, LibreTexts, Open Yale):**
+  - `commands/providers.rs` (`provider_search/preview/import`) dispatches to `services/providers/<name>.rs`; each produces a pure `build::Plan`, and `build::write` creates the course (deleting it if anything fails part-way)
+  - catalogues are cached 24 h in `yt_search_cache` under `catalog:<provider>` and searched locally (`common::rank`)
+  - `common::Polite` spaces requests per provider: Yale 1 s, LibreTexts 500 ms, NPTEL 250 ms, OpenStax 50 ms (CDN files); fetches run at most 4 at a time
+  - imports build in `media/.incoming/<provider>-<id>`, then `common::relocate` moves them to `media/<course slug>/<provider>` and fixes paths
+  - provider HTML goes through `common::sanitize_html` (ammonia allow-list, MathML kept); images are stored and referenced as `lectern-media:<rel>`, resolved at serve time by `get_material_html`
+  - HTML readings and transcripts store their text as one page (`materials::set_pages`), which is what makes ⌘K and AI context work; `course_info.pages` only lists materials with no lesson
+  - NPTEL pages are SvelteKit `__data.json` in devalue format (`devalue.rs`); English VTT refs are Drive ids or `gs://` paths (`nptel::vtt_url`), and its VTT uses `MM:SS.mmm` with minutes past 60
+  - live checks: `cargo test --lib -- --ignored live_provider --nocapture` (all four, ~30 s)
+- **AI:** `services/ai.rs`, raw HTTP (no Rust SDK). Never call the API without an explicit click; `estimate_restructure` is local-only. Proposals go through `repo/restructure::normalize`; `apply` saves an undo snapshot in settings `restructure_undo:<course>`.
+- **E2E mock:** `tests/e2e/mock-ipc.ts` handlers get the invoke args and every call is recorded on `window.__calls`. Plugin `ask()` arrives as `plugin:dialog|message`. Handlers are keyed by the binding's arg names (`get_lesson_context` takes `id`, not `lessonId`). `http://127.0.0.1:9/**` is routed to `tests/e2e/fixtures/sample.pdf`, so pdf.js really renders.
+- **Downloads (Phase 3):**
+  - `services/downloads.rs` runs a loop that claims rows from `repo/downloads.rs` with live concurrency (setting `download_concurrency`)
+  - pause/cancel go through a `watch` channel that kills yt-dlp; `--continue` resumes from the `.part` files
+  - at startup, `requeue_interrupted` turns `running` rows back into `queued` (and doesn't count that as a failed attempt)
+  - `lessons.local_video_path` is set **only** after `media::verify_download` passes: ffprobe duration within ±3% (minimum 10 s) and size over 1 MB
+  - yt-dlp spends 40+ s extracting before the first byte, so the UI shows "Downloading 0%" for a while; that's normal
+  - progress uses `--print before_dl:LECTERNSIZE|…` (expected total) and `--progress-template download:LECTERN|…`, combined across the video and audio streams by `ProgressTracker`
+  - a live test exists: `cargo test --lib -- --ignored live_download --nocapture` (about 150 MB, ~2.5 min)
+- **Binaries:**
+  - `paths::locate_binary` finds yt-dlp/ffmpeg/ffprobe in order: data_dir/bin → next to the executable → PATH
+  - packaged apps need the sidecars, because macOS GUI apps get a minimal PATH; run `pnpm fetch-binaries` before `tauri build`
+  - the yt-dlp updater writes to `data_dir/bin`
+- **Local playback:** `lib/local-player.ts` plays the URL from `get_media_url`: `services/player_server.rs` serves `<data_dir>/media` at `/media/<per-launch token>/<rel>` with Range support. **Don't use `convertFileSrc` for video**: WKWebView plays `asset://` video with no audio. Images are fine on the asset protocol. Frame step is `,`/`.`.
+- **Subtitles / HTTP 429:**
+  - never request `--sub-langs en.*` or a translated auto track; YouTube's timedtext endpoint 429s
+  - `services/ytdlp.rs::choose_track` picks one track: manual → `<pref>-orig` → any `-orig` → translated
+  - a full fetch takes ~30–70 s, mostly the `-J` probe; the UI says so
+  - a live test exists: `cargo test --lib -- --ignored live_transcript`
+- **yt-dlp warns "No supported JavaScript runtime"** (deno). Metadata and subtitles still work. The Phase 3 spike showed 720p downloads work without one (~2 MB/s), so no runtime is bundled.
+- **YouTube auto-caption VTT is "rolling":**
+  - each cue repeats the previous line plus new words with inline `<00:00:01.840><c>` tags, and there are 10 ms snapshot cues
+  - `vtt::parse(…, rolling=true)` dedupes; manual subs must use `rolling=false`
+- **Search:**
+  - user text always goes through `search::to_fts_query`: tokens are quoted, last token gets `*`
+  - snippets are HTML-escaped in Rust with sentinel → `<mark>`, which is the only reason `dangerouslySetInnerHTML` is OK in `CommandPalette`
+- **Annotations:**
+  - `annotations.rid` (FTS rowid) is `max(rid)+1` at insert
+  - editors patch the TanStack cache and save debounced via `useAutosave`, which flushes on unmount and quit
+- **Hotkeys:**
+  - the player (`StudyPlayer`) owns Space/J/K/L/arrows/[ ]/F/M
+  - the lesson route owns N/B/Q/T and `/`
+  - Cmd+K lives in `CommandPalette`
+  - all of them ignore keystrokes inside inputs and TipTap; Esc in TipTap blurs back to the player
+- **specta + f64:** every f64 field is `number | null` in TS (e.g. cue `start ?? 0`).
+- **specta:**
+  - `f64` exports as `number | null` (NaN); use `?? default` in TS.
+  - Avoid `i64` in exported types (BigInt is forbidden); use `i32`.
+  - Partial-update structs use `#[specta(optional)]` + `#[serde(default)]`. In `update_course`, `Some("")` clears a text field.
+- **tauri-specta / specta** are pinned to `=2.0.0-rc.26` and must stay in lockstep.
+- **`rusqlite_migration`** conflicts with rusqlite 0.41 over the `links = "sqlite3"` rule. That's why the migrator is hand-rolled.
+- **`protocol-asset`:** the Cargo feature requires `app.security.assetProtocol.enable` in `tauri.conf.json`, or the build script fails.
+- **`cargo run` / `tauri dev`** need `default-run = "lectern"` because `src/bin/seed.rs` exists. `seed` needs `--features seed` (keeps it out of the bundle).
+- **YouTube embeds in a webview:**
+  - a packaged app (`tauri://localhost`) gets **error 153**, because YouTube needs an http(s) referrer
+  - fix: `services/player_server.rs` serves `assets/player.html` on `127.0.0.1:<random port>`, and `src/lib/youtube-iframe.ts` talks to it via `postMessage` (namespace `lectern-player`, origin-checked on both sides)
+  - dev and release use the same path; always verify playback in the built `.app`, not only in dev
+  - its CSP `frame-ancestors` lists the allowed parent origins, so keep it in sync if the dev port changes
+- **Playwright** must not reuse an existing server on a shared port: it once silently tested another project's app.
+- **yt-dlp `--flat-playlist`** returns no license, so CC badges only appear for API imports. Single-video imports via `dump_video` do include the license.
+- **Keychain** reads are cached in `AppState` because unsigned dev builds can re-prompt on macOS after each rebuild.

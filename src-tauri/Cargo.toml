@@ -1,0 +1,62 @@
+[package]
+name = "lectern"
+version = "0.1.0"
+description = "Turn YouTube playlists into courses you own"
+authors = ["Lectern contributors"]
+edition = "2024"
+default-run = "lectern"
+
+# Dev-only demo importer; behind a feature so `tauri build` doesn't bundle it.
+[[bin]]
+name = "seed"
+path = "src/bin/seed.rs"
+required-features = ["seed"]
+
+[features]
+seed = []
+
+[lib]
+name = "lectern_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["protocol-asset"] }
+tauri-plugin-opener = "2"
+tauri-plugin-shell = "2"
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri-specta = { version = "=2.0.0-rc.26", features = ["derive", "typescript"] }
+specta = { version = "=2.0.0-rc.26", features = ["derive"] }
+specta-typescript = "*"
+rusqlite = { version = "0.41", features = ["bundled"] }
+thiserror = "2"
+ulid = "1"
+chrono = { version = "0.4", features = ["serde"] }
+keyring = "4"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+tokio = { version = "1", features = ["process", "sync", "time", "macros", "rt-multi-thread", "net", "io-util", "fs"] }
+dirs = "6"
+url = "2"
+regex = "1"
+log = "0.4"
+sha2 = "0.10"
+tauri-plugin-notification = "2"
+zip = { version = "2", default-features = false, features = ["deflate"] }
+pdf-extract = "0.12.1"
+ammonia = "4.2"
+scraper = "0.29"
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+# PDF text runs in a helper process (services::pdf_text), so a parser panic can't take the app down.
+panic = "abort"
+strip = true

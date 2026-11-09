@@ -1,0 +1,103 @@
+{
+ "title": "Calculus Volume 1",
+ "revised": "2026-07-15T21:04:48+00:00",
+ "tree": {
+  "id": "8b89d172-2927-466f-8661-01abc7ccdba4@8dbc2ce",
+  "title": "Calculus Volume 1",
+  "contents": [
+   {
+    "id": "054c519f-91dd-4df7-b604-050ff3e3e6fc@",
+    "title": "<span data-type=\"\" itemprop=\"\" class=\"os-text\">Preface</span>",
+    "toc_type": "book-content",
+    "toc_target_type": "preface",
+    "slug": "preface"
+   },
+   {
+    "id": "3e8ab9d9-7c4a-5fa0-a43b-43d567428291@8dbc2ce",
+    "title": "<span class=\"os-number\"><span class=\"os-part-text\">Chapter </span>1</span>\n<span class=\"os-divider\"> </span>\n<span class=\"os-text\" data-type=\"\" itemprop=\"\">Functions and Graphs</span>",
+    "toc_type": "chapter",
+    "contents": [
+     {
+      "id": "1f64cb6f-6f92-4ee8-a4e7-9c20c6eed1e7@",
+      "title": "<span data-type=\"\" itemprop=\"\" class=\"os-text\">Introduction</span>",
+      "toc_type": "book-content",
+      "toc_target_type": "intro",
+      "slug": "1-introduction"
+     },
+     {
+      "id": "7cfe0552-bc12-452e-9c56-418ec508a280@",
+      "title": "<span class=\"os-number\">1.1</span><span class=\"os-divider\"> </span><span data-type=\"\" itemprop=\"\" class=\"os-text\">Review of Functions</span>",
+      "toc_type": "book-content",
+      "toc_target_type": "numbered-section",
+      "slug": "1-1-review-of-functions"
+     },
+     {
+      "id": "0a088034-ada8-58e9-bd37-40034e12bdd7@8dbc2ce",
+      "title": "<span class=\"os-text\">Chapter Review</span>",
+      "toc_type": "sub-book-tree",
+      "contents": [
+       {
+        "id": "e316e9e3-8d10-516e-b53f-c29b3b1544fd@8dbc2ce",
+        "title": "<span class=\"os-text\">Key Terms</span>",
+        "toc_type": "book-content",
+        "toc_target_type": "composite-page",
+        "slug": "1-key-terms"
+       },
+       {
+        "id": "23452f44-bf85-50be-9f80-c25aa81260fa@8dbc2ce",
+        "title": "<span class=\"os-text\">Key Equations</span>",
+        "toc_type": "book-content",
+        "toc_target_type": "composite-page",
+        "slug": "1-key-equations"
+       }
+      ],
+      "slug": "1-chapter-review"
+     }
+    ],
+    "slug": "1-functions-and-graphs"
+   },
+   {
+    "id": "3be3840a-d419-4680-a09e-8dea36bacbf7@",
+    "title": "<span class=\"os-number\"><span class=\"os-part-text\">Appendix </span>C</span><span class=\"os-divider\"> </span><span data-type=\"\" itemprop=\"\" class=\"os-text\">Review of Pre-Calculus</span>",
+    "toc_type": "book-content",
+    "toc_target_type": "appendix",
+    "slug": "c-review-of-pre-calculus"
+   },
+   {
+    "id": "1c43c0a1-f1d0-5218-8863-c3b8b96cd2e6@8dbc2ce",
+    "title": "<span class=\"os-text\">Answer Key</span>",
+    "toc_type": "sub-book-tree",
+    "contents": [
+     {
+      "id": "cfd44847-1421-5845-9f39-6dfb7e31d9f1@8dbc2ce",
+      "title": "<span class=\"os-text\">Chapter 1</span>",
+      "toc_type": "book-content",
+      "toc_target_type": "answer-key",
+      "slug": "chapter-1"
+     }
+    ],
+    "slug": "answer-key"
+   },
+   {
+    "id": "0abf5180-0395-59bb-9e7c-603abeadbe20@8dbc2ce",
+    "title": "<span class=\"os-text\">Index</span>",
+    "toc_type": "book-content",
+    "toc_target_type": "index",
+    "slug": "index"
+   }
+  ],
+  "slug": "calculus-volume-1"
+ },
+ "slug": "calculus-volume-1",
+ "id": "8b89d172-2927-466f-8661-01abc7ccdba4",
+ "version": "8dbc2ce",
+ "license": {
+  "url": "http://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "name": "Creative Commons Attribution-NonCommercial-ShareAlike License"
+ },
+ "language": "en",
+ "content": "",
+ "repo_schema_version": 1,
+ "style_name": "calculus",
+ "style_href": "../resources/styles/webview-generic.css"
+}

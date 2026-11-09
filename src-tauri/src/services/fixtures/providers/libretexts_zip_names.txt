@@ -1,0 +1,34 @@
+00000!A Cover.pdf
+00000!A TitlePage.pdf
+00000!B InfoPage.pdf
+00000!C Table of Contents.pdf
+00000!D Licensing.pdf
+00000!E Introduction - A Letter to the Illustration Student from your Professor.pdf
+00000!F Special Thanks.pdf
+00000!G About the Author and the Co-Contributors.pdf
+1! Illustrating for a Client.pdf
+1.1! The Specifications- Getting Started with Any Illustration.pdf
+1.2! Professionalism.pdf
+1.3! Materials and Media.pdf
+1.4! Working with an Illustration Client.pdf
+1.5! Assignment- Botanical Illustration.pdf
+1.6! Assignment- The Illustrated Poster.pdf
+2! Narrative Illustrations.pdf
+2.1! Where do your Illustrations Belong.pdf
+2.2! Crafting Dynamic Narrative Illustrations--A Checklist.pdf
+2.3! An Introduction to Spot Illustrations.pdf
+2.4! Assignment- Two Spot Illustrations.pdf
+2.5! Assignment- Full Page and Spread Illustrations.pdf
+2.6! Assignment- The Illustrated Book Cover.pdf
+3! Graphic Narrative.pdf
+4! Next Steps- Putting Your Art into the World.pdf
+4.1! Thinking about Artist Contracts- How to Protect Your Work.pdf
+4.2! The Illustrator's Website.pdf
+4.3! Crafting an Illustration Portfolio.pdf
+4.4! Assignment- Illustrated Postcards for Self-Promotion.pdf
+99999!A Resources for Illustrators.pdf
+99999!B Index.pdf
+99999!C Glossary.pdf
+99999!D Detailed Licensing.pdf
+99999!E 10! Glossary.pdf
+99999!F Detailed Licensing.pdf
