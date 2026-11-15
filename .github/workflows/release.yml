@@ -1,6 +1,11 @@
 # Builds unsigned installers for every platform and attaches them to a draft GitHub release.
 # Cut a release: `pnpm version:set X.Y.Z`, commit, `git tag vX.Y.Z`, `git push origin master vX.Y.Z`,
 # then review and publish the draft on GitHub.
+#
+# Windows signing (SignPath Foundation, see CODE_SIGNING_POLICY.md) turns on when the repo variable
+# SIGNPATH_ORGANIZATION_ID is set, together with SIGNPATH_PROJECT_SLUG, SIGNPATH_SIGNING_POLICY_SLUG
+# and the secret SIGNPATH_API_TOKEN. The SignPath artifact configurations are in .signpath/.
+# Each signed release needs two approvals in SignPath (the app exe, then the installers).
 name: release
 
 on:
@@ -87,8 +92,41 @@ jobs:
           pnpm exec playwright install --with-deps chromium
           pnpm test:e2e
 
-  build:
+  draft-release:
     needs: test
+    runs-on: ubuntu-22.04
+    outputs:
+      id: ${{ steps.draft.outputs.id }}
+    steps:
+      - name: Find or create the draft release
+        id: draft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          id=$(gh api "repos/$REPO/releases" --paginate --jq ".[] | select(.draft and .tag_name == \"$TAG\") | .id" | head -n1)
+          if [ -z "$id" ]; then
+            cat > notes.md <<'EOF'
+          ## Downloads
+          - **macOS (Apple silicon, M1 and later):** `Lectern_*_aarch64.dmg`
+          - **macOS (Intel):** `Lectern_*_x64.dmg`
+          - **Windows:** `Lectern_*_x64-setup.exe` (or the `.msi`)
+          - **Linux:** `Lectern_*_amd64.AppImage` or `Lectern_*_amd64.deb`
+
+          ## First launch
+          - **macOS** (not notarised): drag Lectern to Applications, then right-click it → **Open** → **Open**. If macOS says the app "is damaged" or still refuses, run `xattr -dr com.apple.quarantine /Applications/Lectern.app` in Terminal, or use System Settings → Privacy & Security → **Open Anyway**.
+          - **Windows:** if SmartScreen appears, click **More info** → **Run anyway**. (Signed builds can still show this for a new release until it has been downloaded enough times.)
+          - **Linux:** `chmod +x Lectern_*.AppImage` and run it, or `sudo apt install ./Lectern_*.deb`.
+
+          Your library is stored in `~/Lectern` (you can choose another folder on first launch). [Code signing policy](https://github.com/devvspaces/oplearn/blob/master/CODE_SIGNING_POLICY.md)
+          EOF
+            id=$(gh api -X POST "repos/$REPO/releases" -f tag_name="$TAG" -f name="Lectern ${TAG#v}" \
+              -F draft=true -F prerelease=false -F body=@notes.md --jq .id)
+          fi
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: [test, draft-release]
     strategy:
       fail-fast: false
       matrix:
@@ -102,6 +140,10 @@ jobs:
           - os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
     runs-on: ${{ matrix.os }}
+    env:
+      # 'true' only for the Windows job once SignPath is configured.
+      SIGN_WINDOWS: ${{ matrix.os == 'windows-latest' && vars.SIGNPATH_ORGANIZATION_ID != '' }}
+      BUNDLE_DIR: src-tauri/target/${{ matrix.target }}/release/bundle
     steps:
       - uses: actions/checkout@v4
         with:
@@ -128,26 +170,87 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Sidecar binaries for ${{ matrix.target }}
         run: pnpm fetch-binaries --target ${{ matrix.target }}
+
       - name: Build and upload to the draft release
+        if: env.SIGN_WINDOWS != 'true'
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ env.TAG }}
-          releaseName: "Lectern v__VERSION__"
-          releaseDraft: true
-          prerelease: false
+          releaseId: ${{ needs.draft-release.outputs.id }}
           args: --target ${{ matrix.target }}
-          releaseBody: |
-            ## Downloads
-            - **macOS (Apple silicon, M1 and later):** `Lectern_*_aarch64.dmg`
-            - **macOS (Intel):** `Lectern_*_x64.dmg`
-            - **Windows:** `Lectern_*_x64-setup.exe` (or the `.msi`)
-            - **Linux:** `Lectern_*_amd64.AppImage` or `Lectern_*_amd64.deb`
 
-            ## First launch (these builds aren't signed by Apple or Microsoft)
-            - **macOS:** drag Lectern to Applications, then right-click it → **Open** → **Open**. If macOS says the app "is damaged" or still refuses, run `xattr -dr com.apple.quarantine /Applications/Lectern.app` in Terminal, or use System Settings → Privacy & Security → **Open Anyway**.
-            - **Windows:** if SmartScreen appears, click **More info** → **Run anyway**.
-            - **Linux:** `chmod +x Lectern_*.AppImage` and run it, or `sudo apt install ./Lectern_*.deb`.
-
-            Your library is stored in `~/Lectern` (you can choose another folder on first launch).
+      # --- Signed Windows build: build the exe, sign it, bundle the installers from it, sign those. ---
+      - name: App version
+        if: env.SIGN_WINDOWS == 'true'
+        id: version
+        shell: bash
+        run: echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+      - name: Build lectern.exe (no installers yet)
+        if: env.SIGN_WINDOWS == 'true'
+        run: pnpm tauri build --target ${{ matrix.target }} --no-bundle
+      - name: Upload unsigned lectern.exe
+        if: env.SIGN_WINDOWS == 'true'
+        id: unsigned-exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-exe
+          path: src-tauri/target/${{ matrix.target }}/release/lectern.exe
+          if-no-files-found: error
+      - name: Sign lectern.exe (approve in SignPath)
+        if: env.SIGN_WINDOWS == 'true'
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: exe
+          github-artifact-id: ${{ steps.unsigned-exe.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: signed-exe
+          parameters: |
+            version: "${{ steps.version.outputs.version }}"
+      - name: Replace lectern.exe with the signed copy
+        if: env.SIGN_WINDOWS == 'true'
+        shell: pwsh
+        run: Copy-Item signed-exe/lectern.exe src-tauri/target/${{ matrix.target }}/release/lectern.exe -Force
+      - name: Bundle the installers from the signed exe
+        if: env.SIGN_WINDOWS == 'true'
+        run: pnpm tauri bundle --target ${{ matrix.target }} --bundles nsis,msi
+      - name: Collect the installers
+        if: env.SIGN_WINDOWS == 'true'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force unsigned-installers | Out-Null
+          Copy-Item "$env:BUNDLE_DIR/nsis/*-setup.exe", "$env:BUNDLE_DIR/msi/*.msi" unsigned-installers/
+      - name: Upload unsigned installers
+        if: env.SIGN_WINDOWS == 'true'
+        id: unsigned-installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-installers
+          path: unsigned-installers/
+          if-no-files-found: error
+      - name: Sign the installers (approve in SignPath)
+        if: env.SIGN_WINDOWS == 'true'
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: installers
+          github-artifact-id: ${{ steps.unsigned-installers.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: signed-installers
+          parameters: |
+            version: "${{ steps.version.outputs.version }}"
+      - name: Upload the signed installers to the draft release
+        if: env.SIGN_WINDOWS == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "$TAG" signed-installers/* --clobber --repo "${{ github.repository }}"

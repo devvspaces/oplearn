@@ -2,7 +2,7 @@
 
 Lectern is a desktop app that turns open courses into study courses you own: YouTube playlists, MIT OpenCourseWare, NPTEL, OpenStax, LibreTexts and Open Yale Courses. Everything stays on your computer.
 
-Built with Tauri v2 (Rust core, SQLite) and React 19 with TypeScript and Tailwind. See [SPEC.md](SPEC.md) for the full design.
+Built with Tauri v2 (Rust core, SQLite) and React 19 with TypeScript and Tailwind. See [SPEC.md](SPEC.md) for the full design. MIT licensed · [Code signing policy](CODE_SIGNING_POLICY.md).
 
 ## Features
 
@@ -18,7 +18,7 @@ No telemetry. API keys live only in your OS keychain.
 
 ## Install
 
-Download the installer for your system from [Releases](https://github.com/devvspaces/oplearn/releases):
+Download the installer for your system from [Releases](https://github.com/devvspaces/oplearn/releases) ([code signing policy](CODE_SIGNING_POLICY.md)):
 
 | System | File |
 | --- | --- |
@@ -108,8 +108,12 @@ git push origin master v0.2.0
 
 The `release` workflow checks that the tag matches the version, runs the tests, builds macOS (Apple silicon and Intel), Windows and Linux installers, and attaches them to a **draft** release. Review it on GitHub and click Publish.
 
-macOS builds are ad-hoc signed but not notarised (there's no Apple Developer account), and Windows builds are unsigned.
+macOS builds are ad-hoc signed but not notarised (there's no Apple Developer account). Windows builds are signed through SignPath Foundation once the `SIGNPATH_*` repository variables and secret are set (see [Code signing policy](CODE_SIGNING_POLICY.md)); until then they are unsigned.
 
 ## Responsible use
 
 Lectern streams through YouTube's official embedded player, and downloading is opt-in per course. Download only content you have the right to, such as Creative Commons lectures or your own videos. Imported provider content keeps its license and attribution; it's for your personal study.
+
+## License
+
+[MIT](LICENSE). Bundled tools keep their own licenses: yt-dlp (Unlicense) and FFmpeg (LGPL/GPL, depending on the build).

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SignPath artifact configuration "exe": the app binary, signed before bundling (release.yml).
+     Paste into the SignPath project. Signs only lectern.exe; never the bundled sidecars. -->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <parameters>
+    <parameter name="version" />
+  </parameters>
+  <zip-file>
+    <pe-file path="lectern.exe" product-name="Lectern" product-version="${version}">
+      <authenticode-sign />
+    </pe-file>
+  </zip-file>
+</artifact-configuration>
