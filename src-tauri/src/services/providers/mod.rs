@@ -203,14 +203,22 @@ mod live_tests {
     async fn live_provider_openstax() {
         let pol = common::Polite::new(&http(), openstax::GAP);
         let books = openstax::catalog(&pol).await.unwrap();
-        let book = books.into_iter().find(|b| b.slug == "calculus-volume-1").unwrap();
+        let book = books
+            .into_iter()
+            .find(|b| b.slug == "calculus-volume-1")
+            .unwrap();
         let mut l = openstax::load(&pol, book).await.unwrap();
         l.tree.chapters.truncate(1);
         l.tree.chapters[0].sections.truncate(2);
         let dir = tempfile::tempdir().unwrap();
-        let p = openstax::plan(&pol, &l, dir.path(), false, &quiet()).await.unwrap();
+        let p = openstax::plan(&pol, &l, dir.path(), false, &quiet())
+            .await
+            .unwrap();
         let html = p.modules[0].lessons[1].materials[0].html.clone().unwrap();
-        assert!(html.contains("<math") && html.contains("lectern-media:img/"), "math and stored images");
+        assert!(
+            html.contains("<math") && html.contains("lectern-media:img/"),
+            "math and stored images"
+        );
         println!("OpenStax: {}", report(&p, dir.path()));
     }
 
@@ -223,8 +231,15 @@ mod live_tests {
         let book = books.into_iter().find(|b| b.id == "human-354234").unwrap();
         let l = libretexts::load(&pol, book).await.unwrap();
         let dir = tempfile::tempdir().unwrap();
-        let p = libretexts::plan(&pol, &l, dir.path(), &quiet()).await.unwrap();
-        let with_pdf = p.modules.iter().flat_map(|m| &m.lessons).filter(|l| !l.materials.is_empty()).count();
+        let p = libretexts::plan(&pol, &l, dir.path(), &quiet())
+            .await
+            .unwrap();
+        let with_pdf = p
+            .modules
+            .iter()
+            .flat_map(|m| &m.lessons)
+            .filter(|l| !l.materials.is_empty())
+            .count();
         assert_eq!(with_pdf, p.lesson_count(), "every lesson has its PDF");
         println!("LibreTexts: {}", report(&p, dir.path()));
     }
@@ -236,7 +251,11 @@ mod live_tests {
         let list = yale::catalog(&pol).await.unwrap();
         assert!(list.len() > 30, "{}", list.len());
         let mut c = yale::course(&pol, "astronomy/astr-160").await.unwrap();
-        let exam = c.sessions.iter().position(|s| s.label.starts_with("Exam")).unwrap();
+        let exam = c
+            .sessions
+            .iter()
+            .position(|s| s.label.starts_with("Exam"))
+            .unwrap();
         c.sessions = vec![c.sessions[0].clone(), c.sessions[exam].clone()];
         let dir = tempfile::tempdir().unwrap();
         let p = yale::plan(&pol, &c, dir.path(), &quiet()).await.unwrap();
