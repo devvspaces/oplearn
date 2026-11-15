@@ -6,6 +6,7 @@ pub mod error;
 pub mod paths;
 pub mod services;
 pub mod shutdown;
+mod startup_dialog;
 pub mod state;
 
 use tauri::Manager;
@@ -194,7 +195,7 @@ pub fn run() {
         .setup(move |app| {
             builder.mount_events(app);
             let config_dir = app.path().app_config_dir()?;
-            let paths = paths::Paths::resolve(&config_dir)?;
+            let paths = startup_dialog::resolve_paths_interactively(&config_dir)?;
             app.asset_protocol_scope()
                 .allow_directory(&paths.data_dir, true)?;
             let loopback =

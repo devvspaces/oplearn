@@ -208,7 +208,7 @@ function SettingsPage() {
 
       <Section
         title="Data folder"
-        description="Your library database and any downloaded media live here. Point it at an external drive if you like."
+        description="Your library database and any downloaded media live here. Point it at an external drive if you like. If that drive isn’t connected when Lectern starts, you’ll be asked where to open instead."
       >
         <div className="flex items-center gap-3">
           <code className="min-w-0 flex-1 truncate rounded bg-muted px-2 py-1.5 text-xs">
