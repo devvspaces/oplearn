@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SignPath artifact configuration "installers": the NSIS setup and the MSI, built by
+     `tauri bundle` from the already signed lectern.exe (release.yml). Paste into the SignPath project. -->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <parameters>
+    <parameter name="version" />
+  </parameters>
+  <zip-file>
+    <pe-file path="Lectern_*_x64-setup.exe" product-name="Lectern" product-version="${version}">
+      <authenticode-sign />
+    </pe-file>
+    <msi-file path="Lectern_*_x64_en-US.msi">
+      <authenticode-sign />
+    </msi-file>
+  </zip-file>
+</artifact-configuration>

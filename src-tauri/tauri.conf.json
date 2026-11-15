@@ -54,6 +54,7 @@
     "active": true,
     "targets": "all",
     "category": "Education",
+    "copyright": "Copyright (c) 2026 Ayanwola Ayomide. MIT License.",
     "macOS": {
       "signingIdentity": "-"
     },

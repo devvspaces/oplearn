@@ -3,6 +3,7 @@ name = "lectern"
 version = "0.1.0"
 description = "Turn YouTube playlists into courses you own"
 authors = ["Lectern contributors"]
+license = "MIT"
 edition = "2024"
 default-run = "lectern"
 
