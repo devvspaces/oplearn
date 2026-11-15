@@ -79,6 +79,7 @@
   - progress uses `--print before_dl:LECTERNSIZE|…` (expected total) and `--progress-template download:LECTERN|…`, combined across the video and audio streams by `ProgressTracker`
   - a live test exists: `cargo test --lib -- --ignored live_download --nocapture` (about 150 MB, ~2.5 min)
 - **Moving the data folder:** media paths (`lessons.local_video_path`/`thumbnail_path`, `materials.local_path`, `courses.cover_path`) are stored absolute. `repo/relocate.rs::rebase_media_paths` rewrites ones from another data dir onto `<data_dir>/media/<rel>` (only if the file exists) at startup, after restore and after JSON import. Add any new path column to `PATH_COLUMNS`.
+- **Data folder unavailable at startup:** `Paths::load` + `check` (an unmounted `/Volumes/<name>` is reported before anything is created); `startup_dialog.rs` shows a native rfd dialog (Retry / Choose another folder… / Use default) in the setup hook and saves the choice to `bootstrap.json`.
 - **Binaries:**
   - `paths::locate_binary` finds yt-dlp/ffmpeg/ffprobe in order: data_dir/bin → next to the executable → PATH
   - packaged apps need the sidecars, because macOS GUI apps get a minimal PATH; run `pnpm fetch-binaries` before `tauri build`
